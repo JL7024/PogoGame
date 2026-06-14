@@ -37,14 +37,16 @@ extends CharacterBody2D
 @export_group("Attack / Pogo")
 @export var attack_time := 0.16
 @export var attack_cooldown := 0.22
-@export var attack_reach := 40.0                    # how far the hitbox sits from the body
-@export var attack_size_diag := Vector2(50, 50)     # diagonal slash hitbox
-@export var attack_size_vert := Vector2(50, 46)     # up / down slash hitbox
-@export var attack_size_horiz := Vector2(46, 50)    # left / right slash hitbox
+@export var attack_reach := 46.0                    # how far the hitbox sits from the body
+@export var attack_size_diag := Vector2(58, 58)     # diagonal slash hitbox
+@export var attack_size_vert := Vector2(58, 54)     # up / down slash hitbox
+@export var attack_size_horiz := Vector2(54, 58)    # left / right slash hitbox
 @export var pogo_up := -470.0
 @export var pogo_down := 560.0
 @export var pogo_side := 380.0
 @export var pogo_diag_mult := 1.3                   # extra punch for diagonal bounces (down-right -> up-left, etc.)
+@export var pogo_weak_mult := 0.6                   # bounce strength for an inner-blade hit vs a clean tip hit
+@export var pogo_sweet_at := 0.85                   # hit beyond attack_reach*this (toward the tip) = full-power pogo
 @export var bounce_lock := 0.15
 
 @export_group("Juice")
@@ -275,24 +277,42 @@ func _poll_bounce() -> void:
 	dashing = false
 	dashes_left = max_dashes
 	bounce_timer = bounce_lock
-	if hit.has_meta("launch"):
+	# Extension point: a gadget can carry an "on_slash" Callable(player, dir) and
+	# run its own reaction (open a door, break, custom launch...). It returns
+	# whether the player should STILL get the standard directional pogo.
+	var pogo := true
+	if hit.has_meta("on_slash"):
+		pogo = bool(hit.get_meta("on_slash").call(self, attack_dir))
+	elif hit.has_meta("launch"):
 		velocity = hit.get_meta("launch")
 		bounce_timer = maxf(bounce_timer, 0.18)
-	else:
-		_apply_bounce()
-	shake = shake_on_pogo
-	_squash(Vector2(0.8, 1.25))
-	if hit is Node2D:
+		pogo = false
+	# Sweet spot: a default pogo only reaches full power when contact lands near
+	# the blade TIP (outer reach); inner hits bounce weaker. Custom gadgets
+	# (launch pad / on_slash) always read as a clean hit for juice purposes.
+	var sweet := true
+	if pogo:
+		if hit is Node2D:
+			var along := ((hit as Node2D).global_position - global_position).dot(attack_dir)
+			sweet = along >= attack_reach * pogo_sweet_at
+		_apply_bounce(1.0 if sweet else pogo_weak_mult)
+	# Juice scaled by how clean the hit was.
+	shake = shake_on_pogo if sweet else shake_on_pogo * 0.45
+	_squash(Vector2(0.8, 1.25) if sweet else Vector2(0.9, 1.1))
+	if hit is Node2D and is_instance_valid(hit):
 		var n := hit as Node2D
-		n.scale = Vector2(1.25, 0.78)
+		n.scale = Vector2(1.3, 0.72) if sweet else Vector2(1.14, 0.88)
 		var tw := create_tween()
 		tw.tween_property(n, "scale", Vector2.ONE, 0.16)
+		if pogo and sweet:
+			_flash(n)
 
-func _apply_bounce() -> void:
+func _apply_bounce(strength: float) -> void:
 	# Bounce opposite the slash direction. Diagonals push both axes, so a
 	# down-right slash launches you up-left, etc. — boosted by pogo_diag_mult.
+	# `strength` is the sweet-spot weighting (1.0 = clean tip hit, <1 = inner hit).
 	var diag := absf(attack_dir.x) > 0.1 and absf(attack_dir.y) > 0.1
-	var m := pogo_diag_mult if diag else 1.0
+	var m := strength * (pogo_diag_mult if diag else 1.0)
 	if absf(attack_dir.x) > 0.1:
 		velocity.x = -signf(attack_dir.x) * pogo_side * m
 	if attack_dir.y > 0.1:        # slashed downward -> launch up
@@ -332,6 +352,13 @@ func _squash(s: Vector2) -> void:
 	body_vis.scale = s
 	var tw := create_tween()
 	tw.tween_property(body_vis, "scale", Vector2.ONE, 0.14)
+
+func _flash(n: Node2D) -> void:
+	# Brief bright pop to signal a clean tip-hit pogo.
+	var prev := n.modulate
+	n.modulate = Color(2.2, 2.2, 2.2, prev.a)
+	var tw := create_tween()
+	tw.tween_property(n, "modulate", prev, 0.18)
 
 func _respawn() -> void:
 	global_position = spawn_point
