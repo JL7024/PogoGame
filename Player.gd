@@ -28,7 +28,7 @@ extends CharacterBody2D
 @export var wall_jump_lock := 0.16
 
 @export_group("Dash")
-@export var dash_speed := 520.0
+@export var dash_speed := 560.0
 @export var dash_time := 0.14
 @export var dash_cooldown := 0.10
 @export var max_dashes := 1
@@ -37,10 +37,15 @@ extends CharacterBody2D
 @export_group("Attack / Pogo")
 @export var attack_time := 0.16
 @export var attack_cooldown := 0.22
+@export var attack_reach := 40.0                    # how far the hitbox sits from the body
+@export var attack_size_diag := Vector2(50, 50)     # diagonal slash hitbox
+@export var attack_size_vert := Vector2(50, 46)     # up / down slash hitbox
+@export var attack_size_horiz := Vector2(46, 50)    # left / right slash hitbox
 @export var pogo_up := -470.0
 @export var pogo_down := 560.0
 @export var pogo_side := 380.0
-@export var bounce_lock := 0.12
+@export var pogo_diag_mult := 1.3                   # extra punch for diagonal bounces (down-right -> up-left, etc.)
+@export var bounce_lock := 0.15
 
 @export_group("Juice")
 @export var shake_on_pogo := 7.0
@@ -241,14 +246,13 @@ func _start_attack() -> void:
 	if v == Vector2.ZERO:
 		v = Vector2(facing, 0.0)
 	attack_dir = v.normalized()
-	var reach := 34.0
 	if absf(attack_dir.x) > 0.1 and absf(attack_dir.y) > 0.1:
-		hb_rect.size = Vector2(40, 40)        # diagonal
+		hb_rect.size = attack_size_diag       # diagonal
 	elif absf(attack_dir.y) > absf(attack_dir.x):
-		hb_rect.size = Vector2(40, 36)        # up / down
+		hb_rect.size = attack_size_vert       # up / down
 	else:
-		hb_rect.size = Vector2(34, 40)        # left / right
-	hitbox_shape.position = attack_dir * reach
+		hb_rect.size = attack_size_horiz      # left / right
+	hitbox_shape.position = attack_dir * attack_reach
 	var hx := hb_rect.size.x * 0.5
 	var hy := hb_rect.size.y * 0.5
 	var c := hitbox_shape.position
@@ -286,13 +290,15 @@ func _poll_bounce() -> void:
 
 func _apply_bounce() -> void:
 	# Bounce opposite the slash direction. Diagonals push both axes, so a
-	# down-right slash launches you up-left, etc.
+	# down-right slash launches you up-left, etc. — boosted by pogo_diag_mult.
+	var diag := absf(attack_dir.x) > 0.1 and absf(attack_dir.y) > 0.1
+	var m := pogo_diag_mult if diag else 1.0
 	if absf(attack_dir.x) > 0.1:
-		velocity.x = -signf(attack_dir.x) * pogo_side
+		velocity.x = -signf(attack_dir.x) * pogo_side * m
 	if attack_dir.y > 0.1:        # slashed downward -> launch up
-		velocity.y = pogo_up
+		velocity.y = pogo_up * m
 	elif attack_dir.y < -0.1:     # slashed upward -> slam down
-		velocity.y = pogo_down
+		velocity.y = pogo_down * m
 
 func _on_sensor_area(area: Area2D) -> void:
 	if area.is_in_group("hazard"):
