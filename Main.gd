@@ -16,9 +16,9 @@ func _setup_input() -> void:
 	_add_action("right",  [KEY_D, KEY_RIGHT])
 	_add_action("up",     [KEY_W, KEY_UP])
 	_add_action("down",   [KEY_S, KEY_DOWN])
-	_add_action("jump",   [KEY_SPACE, KEY_Z])
-	_add_action("dash",   [KEY_SHIFT, KEY_L])
-	_add_action("attack", [KEY_J, KEY_X])
+	_add_action("jump",   [KEY_L])
+	_add_action("dash",   [KEY_K])
+	_add_action("attack", [KEY_J])
 
 func _add_action(act: String, keys: Array) -> void:
 	if not InputMap.has_action(act):
@@ -116,7 +116,7 @@ func _build_hud() -> void:
 	add_child(cl)
 	hud = Label.new()
 	hud.position = Vector2(16, 12)
-	hud.text = "PogoGame prototype v2\nMove A/D or Arrows  |  Jump Space (hold = higher)  |  Dash Shift (8-way)  |  Attack J  (hold Up/Down to aim)\nORANGE = down-slash to pogo.   PINK = launch pad.   GREEN crystal = refill dash.   RED = spikes.\nGoal: pogo over the spikes, wall-jump up the chimney, dash through the crystal, ride the launch pad to the GREEN goal."
+	hud.text = "PogoGame prototype v2\nMove WASD  |  Jump L (hold = higher)  |  Dash K (8-way)  |  Attack J  (hold a direction to aim — incl. diagonals)\nORANGE = slash to pogo (try down-left / down-right!).   PINK = launch pad.   GREEN crystal = refill dash.   RED = spikes.\nGoal: pogo over the spikes, wall-jump up the chimney, dash through the crystal, ride the launch pad to the GREEN goal."
 	cl.add_child(hud)
 
 func _rect_poly(size: Vector2, color: Color) -> Polygon2D:

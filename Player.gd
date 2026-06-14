@@ -234,22 +234,21 @@ func _handle_attack(delta: float) -> void:
 			hitbox_vis.visible = false
 
 func _start_attack() -> void:
-	if Input.is_action_pressed("down"):
-		attack_dir = Vector2.DOWN
-	elif Input.is_action_pressed("up"):
-		attack_dir = Vector2.UP
+	# 8-directional aim: hold any combination of WASD; default = facing
+	var ax := Input.get_axis("left", "right")
+	var ay := Input.get_axis("up", "down")
+	var v := Vector2(ax, ay)
+	if v == Vector2.ZERO:
+		v = Vector2(facing, 0.0)
+	attack_dir = v.normalized()
+	var reach := 34.0
+	if absf(attack_dir.x) > 0.1 and absf(attack_dir.y) > 0.1:
+		hb_rect.size = Vector2(40, 40)        # diagonal
+	elif absf(attack_dir.y) > absf(attack_dir.x):
+		hb_rect.size = Vector2(40, 36)        # up / down
 	else:
-		attack_dir = Vector2(facing, 0.0)
-	var reach := 36.0
-	if attack_dir == Vector2.DOWN:
-		hb_rect.size = Vector2(40, 36)
-		hitbox_shape.position = Vector2(0, reach)
-	elif attack_dir == Vector2.UP:
-		hb_rect.size = Vector2(40, 36)
-		hitbox_shape.position = Vector2(0, -reach)
-	else:
-		hb_rect.size = Vector2(34, 40)
-		hitbox_shape.position = Vector2(reach * attack_dir.x, 0)
+		hb_rect.size = Vector2(34, 40)        # left / right
+	hitbox_shape.position = attack_dir * reach
 	var hx := hb_rect.size.x * 0.5
 	var hy := hb_rect.size.y * 0.5
 	var c := hitbox_shape.position
@@ -275,14 +274,8 @@ func _poll_bounce() -> void:
 	if hit.has_meta("launch"):
 		velocity = hit.get_meta("launch")
 		bounce_timer = maxf(bounce_timer, 0.18)
-	elif attack_dir == Vector2.DOWN:
-		velocity.y = pogo_up
-	elif attack_dir == Vector2.UP:
-		velocity.y = pogo_down
-	elif attack_dir.x > 0.0:
-		velocity.x = -pogo_side
 	else:
-		velocity.x = pogo_side
+		_apply_bounce()
 	shake = shake_on_pogo
 	_squash(Vector2(0.8, 1.25))
 	if hit is Node2D:
@@ -290,6 +283,16 @@ func _poll_bounce() -> void:
 		n.scale = Vector2(1.25, 0.78)
 		var tw := create_tween()
 		tw.tween_property(n, "scale", Vector2.ONE, 0.16)
+
+func _apply_bounce() -> void:
+	# Bounce opposite the slash direction. Diagonals push both axes, so a
+	# down-right slash launches you up-left, etc.
+	if absf(attack_dir.x) > 0.1:
+		velocity.x = -signf(attack_dir.x) * pogo_side
+	if attack_dir.y > 0.1:        # slashed downward -> launch up
+		velocity.y = pogo_up
+	elif attack_dir.y < -0.1:     # slashed upward -> slam down
+		velocity.y = pogo_down
 
 func _on_sensor_area(area: Area2D) -> void:
 	if area.is_in_group("hazard"):

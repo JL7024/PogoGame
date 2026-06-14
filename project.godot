@@ -1,5 +1,10 @@
-; Engine configuration file for the PogoGame prototype.
-; (Auto-loadable by Godot 4.6 — open this folder from the Project Manager.)
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -8,11 +13,6 @@ config_version=5
 config/name="PogoGame (prototype)"
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
-
-[display]
-
-window/size/viewport_width=1152
-window/size/viewport_height=648
 
 [rendering]
 
