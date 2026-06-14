@@ -1,0 +1,21 @@
+; Engine configuration file for the PogoGame prototype.
+; (Auto-loadable by Godot 4.6 — open this folder from the Project Manager.)
+
+config_version=5
+
+[application]
+
+config/name="PogoGame (prototype)"
+run/main_scene="res://Main.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=1152
+window/size/viewport_height=648
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.09, 0.11, 0.16, 1)
